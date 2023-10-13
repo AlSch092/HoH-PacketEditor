@@ -9,7 +9,7 @@ EXTERN g_SendKeyPtr: dq
 
 EncryptSendPacketHook PROC 
 	
-	pop r10
+    pop r10 ;our hook code pushes r10, so reverse that instruction here with a pop
 
     push rax
     push rbx
@@ -27,27 +27,23 @@ EncryptSendPacketHook PROC
     push r13
     push r14
     push r15
-	pushfq
+    pushfq
 
-	mov rax, 7FF7EDA84A69h ; key rotates 3~ times using junk data? after sending one valid packet?  -> return addr check, don't log data in these cases
-	cmp [rsp+88h], rax
-	je back
+    mov rax, 7FF7EDA84A69h ; key rotates 3~ times using junk data? after sending one valid packet?  -> return addr check, don't log data in these cases
+    cmp [rsp+88h], rax
+    je back
 
-	sub rsp, 1028h
+    sub rsp, 1028h
+    mov g_SendKeyPtr, rcx
+    mov rcx, rdx  ;buffer
+    mov rdx, r8  ;len
+    mov r8, 1 ; isSendPacket = true
+    call g_LogSendPacketCallback 
+    add rsp, 1028h
 
-	mov g_SendKeyPtr, rcx
-
-	mov rcx, rdx  ;buffer
-	;sub rcx, 2 ;move to start of packet
-	mov rdx, r8  ;len
-	;add rdx, 2 ;add length bytes
-	mov r8, 1 ; isSendPacket = true
-	call g_LogSendPacketCallback 
-
-	add rsp, 1028h
 back:
-	popfq
-	pop r15
+    popfq
+    pop r15
     pop r14
     pop r13
     pop r12
@@ -64,23 +60,23 @@ back:
     pop rbx
     pop rax
 
-	mov [rsp+20h], r9
-	jmp g_LogSendPacketReturnAddress
+    mov [rsp+20h], r9
+    jmp g_LogSendPacketReturnAddress
 
 EncryptSendPacketHook ENDP
 
 
 EncryptSendPacket PROC
 
-	mov [rsp+20h],r9
-	mov [rsp+18h],r8d
-	mov [rsp+10h],rdx
-	mov [rsp+08h],rcx
-	sub rsp,18h
-	cmp qword ptr [rsp+20h],00
-	jne cmp_1
-	mov eax,00000010h
-	jmp ending
+        mov [rsp+20h],r9
+        mov [rsp+18h],r8d
+        mov [rsp+10h],rdx
+        mov [rsp+08h],rcx
+        sub rsp,18h
+        cmp qword ptr [rsp+20h],00
+        jne cmp_1
+        mov eax,00000010h
+        jmp ending
 cmp_1:
 	cmp qword ptr [rsp+28h],00
 	jne cmp_2
